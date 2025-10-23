@@ -1,34 +1,58 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [question, setQuestion] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  const fetchQuestion = async () => {
+    setLoading(true)
+    setQuestion("Loading...")
+
+    try {
+      const response = await fetch('https://opentdb.com/api.php?amount=1')
+
+      if (response.status === 429) {
+        setQuestion("Please try again in a moment.")
+        setLoading(false)
+        return
+      }
+
+      if (!response.ok) {
+        setQuestion("Error fetching question.")
+        setLoading(false)
+        return
+      }
+
+      const data = await response.json()
+      const result = data.results?.[0]
+      if (result) {
+        const decoded = decodeHtml(result.question)
+        setQuestion(decoded)
+      } else {
+        setQuestion("No question available.")
+      }
+    } catch (error) {
+      setQuestion("Error fetching question.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const decodeHtml = (html: string) => {
+    const txt = document.createElement("textarea")
+    txt.innerHTML = html
+    return txt.value
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="app">
+      <h1>Trivia App</h1>
+      <p>{question ? question : "Click the button to get a trivia question!"}</p>
+      <button onClick={fetchQuestion} disabled={loading}>
+        {loading ? "Fetching..." : "Get Trivia Question"}
+      </button>
+    </div>
   )
 }
 
